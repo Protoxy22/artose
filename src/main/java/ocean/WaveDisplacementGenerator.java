@@ -1,13 +1,9 @@
 package ocean;
 
-import org.lwjgl.opencl.CL22;
 import org.lwjgl.opengl.GL30;
 
-import compute.ComputeQueue;
-import compute.buffers.ComputeFloatBuffer;
-import compute.buffers.ComputeTexture;
 import ocean.GerstnerBatchGenerator.GerstnerBatch;
-import ocean.compute.CombineCompute;
+import ocean.compute.CombineComputeGL;
 import renderEngine.FrameBufferObject;
 import textures.Texture;
 
@@ -29,27 +25,18 @@ public class WaveDisplacementGenerator {
 	private Ocean ocean;
 	private GerstnerBatchGenerator batchGenerator;
 	
-	private FrameBufferObject waveBuffers;
-	private ComputeTexture waveBuffersCompute;
-	
-	private ComputeFloatBuffer texelSizesCompute;
-	
-	private CombineCompute combineProgram;
-	private ComputeQueue computeQueue = new ComputeQueue();
+        private FrameBufferObject waveBuffers;
+
+        private CombineComputeGL combineProgram;
 	
 	public WaveDisplacementGenerator(Ocean ocean) {
 		this.ocean = ocean;
 		batchGenerator = new GerstnerBatchGenerator(ocean);
 		
-		combineProgram = new CombineCompute(Ocean.TEXTURE_RESOLUTION);
-		
-		waveBuffers = new FrameBufferObject(Ocean.TEXTURE_RESOLUTION, Ocean.TEXTURE_RESOLUTION, Ocean.LOD_COUNT);
-		waveBuffersCompute = ComputeTexture.create(waveBuffers.getTexture(), CL22.CL_MEM_READ_WRITE);
-		
-		texelSizesCompute = ComputeFloatBuffer.create(Ocean.LOD_COUNT, CL22.CL_MEM_READ_ONLY);
-		
-		combineProgram.loadWaveBuffers(waveBuffersCompute);
-		combineProgram.loadTexelSizes(texelSizesCompute);
+                waveBuffers = new FrameBufferObject(Ocean.TEXTURE_RESOLUTION, Ocean.TEXTURE_RESOLUTION, Ocean.LOD_COUNT);
+
+                combineProgram = new CombineComputeGL(waveBuffers.getTexture());
+                combineProgram.loadTextureResolution(Ocean.TEXTURE_RESOLUTION);
 	}
 	
 	public Texture getWaveDisplacements() {
@@ -76,17 +63,19 @@ public class WaveDisplacementGenerator {
 		//  Makes sure OpenGL draw calls are finished, before combining textures
 		GL30.glFinish();
 		
-		for (int i = Ocean.LOD_COUNT - 2 ; i >= 0; i--) {
-			combineProgram.loadLODIndex(i);
-			combineProgram.enqueue(computeQueue);
-			computeQueue.finish();
-		}
-	}
-	
-	private void updateLODs() {		
-		texelSizesCompute.load(ocean.getTexelSizes(), computeQueue);
-		combineProgram.loadTexelSizes(texelSizesCompute);
-	}
+                for (int i = Ocean.LOD_COUNT - 2 ; i >= 0; i--) {
+                        combineProgram.start();
+                        combineProgram.loadLODIndex(i);
+                        combineProgram.dispatch();
+                        combineProgram.stop();
+                }
+        }
+
+        private void updateLODs() {
+                combineProgram.start();
+                combineProgram.loadTexelSizes(ocean.getTexelSizes());
+                combineProgram.stop();
+        }
 	
 	private void renderWaveBuffer(int lodIndex, WavelengthFilter filter) {
 		waveBuffers.bind(lodIndex);
@@ -109,9 +98,6 @@ public class WaveDisplacementGenerator {
 	public void cleanUp() {
 		batchGenerator.cleanUp();
 		waveBuffers.delete();
-		waveBuffersCompute.delete();
-		texelSizesCompute.delete();
-		combineProgram.cleanUp();
-		computeQueue.delete();
-	}
+                combineProgram.cleanUp();
+        }
 }
