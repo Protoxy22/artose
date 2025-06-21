@@ -17,15 +17,17 @@ public class CombineComputeGL extends ComputeShaderProgram {
 
     private int textureWidth;
     private int textureHeight;
+    private int textureId;
 
     public CombineComputeGL(Texture texture) {
         super(SOURCE_FILE);
         this.textureWidth = texture.getWidth();
         this.textureHeight = texture.getHeight();
+        this.textureId = texture.getId();
 
         start();
-        bindImage(0, texture.getId(), GL15.GL_READ_WRITE);
-        GL45.glBindTextureUnit(1, texture.getId());
+        bindImage(0, textureId, GL15.GL_READ_WRITE);
+        GL45.glBindTextureUnit(1, textureId);
         stop();
     }
 
@@ -45,8 +47,12 @@ public class CombineComputeGL extends ComputeShaderProgram {
     }
 
     public void dispatch() {
+        start();
+        bindImage(0, textureId, GL15.GL_READ_WRITE);
+        GL45.glBindTextureUnit(1, textureId);
         dispatch(textureWidth, textureHeight, 1);
         GL42.glMemoryBarrier(GL42.GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        stop();
     }
 
     public void loadTextureResolution(int res) {
