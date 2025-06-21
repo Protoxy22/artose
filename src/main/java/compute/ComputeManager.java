@@ -9,6 +9,7 @@ import static org.lwjgl.opencl.CL10.clGetDeviceIDs;
 import static org.lwjgl.opencl.CL10.clGetPlatformInfo;
 import static org.lwjgl.opengl.CGL.CGLGetCurrentContext;
 import static org.lwjgl.opengl.CGL.CGLGetShareGroup;
+import static org.lwjgl.opengl.WGL.wglGetCurrentDC;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memUTF8;
@@ -23,8 +24,12 @@ import java.util.List;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.opencl.*;
+import org.lwjgl.opencl.APPLEGLSharing;
+import org.lwjgl.opencl.KHRGLSharing;
+import org.lwjgl.glfw.GLFWNativeWGL;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.Platform;
+import org.lwjgl.opengl.WGL;
 
 public class ComputeManager {
 	public static IntBuffer SHARED_ERROR_BUFFER;
@@ -62,25 +67,25 @@ public class ComputeManager {
         deviceCaps = CL.createDeviceCapabilities(device, platformCaps);
         
         PointerBuffer ctxProps = BufferUtils.createPointerBuffer(7);
-        switch (Platform.get()) {
-            case MACOSX:
-                ctxProps
-                    .put(APPLEGLSharing.CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE)
-                    .put(CGLGetShareGroup(CGLGetCurrentContext()));
-                break;
-			case LINUX:
-				throw new RuntimeException("Linux operating system is not currently supported.");
-			case WINDOWS:
-                throw new RuntimeException("Windows operating system is not currently supported.");
-//                ctxProps
-//                    .put(KHRGLSharing.CL_GL_CONTEXT_KHR)
-//                    .put(org.lwjgl.glfw.GLFWNativeWGL.glfwGetWGLContext(window))
-//                    .put(KHRGLSharing.CL_WGL_HDC_KHR)
-//                    .put(org.lwjgl.opengl.WGL.wglGetCurrentDC());
-//				break;
-			default:
-				throw new RuntimeException("Current operating system is not currently supported.");
-        }
+switch (Platform.get()) {
+    case MACOSX:
+        ctxProps
+            .put(APPLEGLSharing.CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE)
+            .put(CGLGetShareGroup(CGLGetCurrentContext()));
+        break;
+    case LINUX:
+        throw new RuntimeException("Linux operating system is not currently supported.");
+    case WINDOWS:
+        ctxProps
+            .put(KHRGLSharing.CL_GL_CONTEXT_KHR)
+            .put(GLFWNativeWGL.glfwGetWGLContext(window))
+            .put(KHRGLSharing.CL_WGL_HDC_KHR)
+            .put(wglGetCurrentDC());
+        break;
+    default:
+        throw new RuntimeException("Current operating system is not currently supported.");
+}
+
         
         ctxProps
 	        .put(CL_CONTEXT_PLATFORM)
