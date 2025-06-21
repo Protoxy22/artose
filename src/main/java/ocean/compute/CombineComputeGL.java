@@ -1,9 +1,9 @@
 package ocean.compute;
 
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL42;
 import org.lwjgl.opengl.GL43;
+import org.lwjgl.opengl.GL45;
 
 import compute.ComputeShaderProgram;
 import textures.Texture;
@@ -25,7 +25,7 @@ public class CombineComputeGL extends ComputeShaderProgram {
 
         start();
         bindImage(0, texture.getId(), GL15.GL_READ_WRITE);
-        GL30.glBindTextureUnit(1, texture.getId());
+        GL45.glBindTextureUnit(1, texture.getId());
         stop();
     }
 
