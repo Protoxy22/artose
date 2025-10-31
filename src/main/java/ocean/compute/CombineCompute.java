@@ -1,46 +1,67 @@
 package ocean.compute;
 
-import compute.ComputeProgram;
-import compute.ComputeQueue;
-import compute.Kernel;
-import compute.buffers.ComputeFloatBuffer;
-import compute.buffers.ComputeTexture;
+import org.lwjgl.opengl.GL43;
+import renderEngine.ComputeShaderProgram;
 import textures.Texture;
 
-public class CombineCompute extends ComputeProgram {
-	private static final String SOURCE_FILE = "compute/combineCompute.txt";
+public class CombineCompute {
+	private static final String SOURCE_FILE = "compute/combineCompute.comp";
 	
-	private int size;
+	private ComputeShaderProgram shader;
 	
-	private Kernel kernel_combine;
+	private int loc_textureResolution;
+	private int loc_lodIndex;
+	private int loc_texelSizes;
 	
-	public CombineCompute(int size) {
-		super(SOURCE_FILE);
-		this.size = size;
-	}
-
-	@Override
-	protected void createKernels() {
-		kernel_combine = super.createKernel("combine", size, size);
-	}
-
-	public void loadWaveBuffers(ComputeTexture buffers) {
-		Texture texture = buffers.getTexture();
+	private int textureResolution;
+	
+	public CombineCompute(int textureResolution) {
+		this.textureResolution = textureResolution;
+		shader = new ComputeShaderProgram(SOURCE_FILE);
 		
-		kernel_combine.setWorkSize(texture.getWidth(), texture.getHeight());
-		kernel_combine.setArgument(0, buffers);
-		kernel_combine.setArgument(1, texture.getWidth());
+		// Get uniform locations
+		shader.bind();
+		loc_textureResolution = shader.getUniformLocation("textureResolution");
+		loc_lodIndex = shader.getUniformLocation("lodIndex");
+		loc_texelSizes = shader.getUniformLocation("texelSizes");
+		shader.unbind();
+	}
+
+	public void loadWaveBuffers(Texture texture) {
+		// Bind the texture as an image for compute shader access
+		shader.bind();
+		GL43.glBindImageTexture(0, texture.getId(), 0, true, 0, 
+			GL43.GL_READ_WRITE, GL43.GL_RGBA32F);
+		shader.loadInt(loc_textureResolution, texture.getWidth());
+		shader.unbind();
 	}
 	
-	public void loadTexelSizes(ComputeFloatBuffer texelSizes) {
-		kernel_combine.setArgument(2, texelSizes);
+	public void loadTexelSizes(float[] texelSizes) {
+		shader.bind();
+		shader.loadFloatArray(loc_texelSizes, texelSizes);
+		shader.unbind();
 	}
 	
 	public void loadLODIndex(int lodIndex) {
-		kernel_combine.setArgument(3, lodIndex);
+		shader.bind();
+		shader.loadInt(loc_lodIndex, lodIndex);
+		shader.unbind();
 	}
 	
-	public void enqueue(ComputeQueue queue) {
-		kernel_combine.enqueue(queue);
+	public void execute() {
+		shader.bind();
+		
+		// Calculate work group counts (16x16 local size in shader)
+		int numGroupsX = (textureResolution + 15) / 16;
+		int numGroupsY = (textureResolution + 15) / 16;
+		
+		shader.dispatch(numGroupsX, numGroupsY, 1);
+		shader.waitForCompletion();
+		
+		shader.unbind();
+	}
+	
+	public void cleanUp() {
+		shader.cleanUp();
 	}
 }
