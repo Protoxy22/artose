@@ -1,9 +1,9 @@
 
 # Artose
 ![Logo](https://user-images.githubusercontent.com/39225800/167268896-e2f03a59-71f0-4ea3-96db-424806d2a295.png)  
-**A** **R***eal*-**T***ime* **O***cean* **S***imulation* **E***ngine* written in Java that uses **OpenGL** and **OpenCL**.
+**A** **R***eal*-**T***ime* **O***cean* **S***imulation* **E***ngine* written in Java that uses **OpenGL** compute shaders.
 ## Description
-This is an implementation of the [Gerstner waves](https://en.wikipedia.org/wiki/Trochoidal_wave) algorithm in Java that uses a renderer I wrote in **OpenGL** and **OpenCL**.
+This is an implementation of the [Gerstner waves](https://en.wikipedia.org/wiki/Trochoidal_wave) algorithm in Java that uses a renderer written in **OpenGL**.
 
 ### 📚 Note
 This project is meant for educational purposes. During the development I referenced the [Crest Unity Addon](https://github.com/wave-harmonic/crest) in order to understand the Gerstner waves algorithm as well as the general graphics pipeline and it's optimization.
@@ -18,9 +18,8 @@ This project is meant for educational purposes. During the development I referen
 
 # :hammer_and_wrench: Technical Details
 
-- Uses an OpenGL renderer
-- Uses OpenCL kernels to combine different wave frequencies into one texture
+- Uses an OpenGL renderer with compute shaders for wave displacement combining
 - Implements a Level of Detail system
 - Has Sub Surface Scattering
 - The Ocean mesh follows the camera allowing for infinite Oceans
-- Currently only works on MacOS
+- Cross-platform support (Windows, Linux, macOS)
