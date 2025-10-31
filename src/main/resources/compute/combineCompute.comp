@@ -1,0 +1,90 @@
+#version 430 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// Input/output texture array
+layout(rgba32f, binding = 0) uniform image2DArray waveBuffers;
+
+// Uniforms
+uniform int textureResolution;
+uniform int lodIndex;
+uniform float texelSizes[16];  // Max LOD_COUNT, we'll use what we need
+
+// Function prototypes
+vec4 WorldToUV(vec2 worldPos, int textureResolution, int lodIdx);
+vec2 UVToWorld(vec2 uv, int textureResolution, int lodIdx);
+
+vec4 WorldToUV(vec2 worldPos, int textureResolution, int lodIdx) {
+    vec2 uv = worldPos / (texelSizes[lodIdx] * float(textureResolution)) + vec2(0.5);
+    return vec4(uv.x, uv.y, float(lodIdx), 0.0);
+}
+
+vec2 UVToWorld(vec2 uv, int textureResolution, int lodIdx) {
+    return texelSizes[lodIdx] * float(textureResolution) * (uv - vec2(0.5));
+}
+
+void main() {
+    // Get global thread indices
+    ivec2 globalID = ivec2(gl_GlobalInvocationID.xy);
+    
+    // Early exit if outside texture bounds
+    if (globalID.x >= textureResolution || globalID.y >= textureResolution) {
+        return;
+    }
+    
+    ivec3 current_coords = ivec3(globalID.x, globalID.y, lodIndex);
+    
+    vec2 current_uv = vec2(float(globalID.x) / float(textureResolution), 
+                           float(globalID.y) / float(textureResolution));
+    
+    vec2 worldPos = UVToWorld(current_uv, textureResolution, lodIndex);
+    
+    vec4 next_coords_float = WorldToUV(worldPos, textureResolution, lodIndex + 1);
+    
+    // Read current data (nearest sampling)
+    vec4 current_data = imageLoad(waveBuffers, current_coords);
+    
+    // For next_data, we need to do bilinear sampling manually
+    // OpenCL used normalized coordinates (0-1) with CLK_NORMALIZED_COORDS_TRUE
+    vec2 next_uv = next_coords_float.xy;
+    int next_layer = lodIndex + 1;
+    
+    // Clamp UV coordinates to valid range [0, 1]
+    next_uv = clamp(next_uv, vec2(0.0), vec2(1.0));
+    
+    // Convert normalized UV (0-1) to pixel coordinates
+    // Subtract 0.5 to account for pixel centers (OpenCL CLK_ADDRESS_CLAMP_TO_EDGE behavior)
+    vec2 tex_coord = next_uv * float(textureResolution) - 0.5;
+    
+    // Get the four surrounding pixels
+    ivec2 coord00 = ivec2(floor(tex_coord));
+    ivec2 coord10 = coord00 + ivec2(1, 0);
+    ivec2 coord01 = coord00 + ivec2(0, 1);
+    ivec2 coord11 = coord00 + ivec2(1, 1);
+    
+    // Clamp coordinates to texture bounds (CLK_ADDRESS_CLAMP_TO_EDGE)
+    coord00 = clamp(coord00, ivec2(0), ivec2(textureResolution - 1));
+    coord10 = clamp(coord10, ivec2(0), ivec2(textureResolution - 1));
+    coord01 = clamp(coord01, ivec2(0), ivec2(textureResolution - 1));
+    coord11 = clamp(coord11, ivec2(0), ivec2(textureResolution - 1));
+    
+    // Get interpolation factors
+    vec2 frac = fract(tex_coord);
+    
+    // Load the four samples
+    vec4 sample00 = imageLoad(waveBuffers, ivec3(coord00, next_layer));
+    vec4 sample10 = imageLoad(waveBuffers, ivec3(coord10, next_layer));
+    vec4 sample01 = imageLoad(waveBuffers, ivec3(coord01, next_layer));
+    vec4 sample11 = imageLoad(waveBuffers, ivec3(coord11, next_layer));
+    
+    // Bilinear interpolation
+    vec4 sample0 = mix(sample00, sample10, frac.x);
+    vec4 sample1 = mix(sample01, sample11, frac.x);
+    vec4 next_data = mix(sample0, sample1, frac.y);
+    
+    // Combine the data
+    vec4 combined_data = current_data + next_data;
+    
+    // Write result back
+    imageStore(waveBuffers, current_coords, combined_data);
+}

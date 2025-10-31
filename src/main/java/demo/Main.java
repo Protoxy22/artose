@@ -4,7 +4,6 @@ import org.joml.Vector3f;
 import org.lwjgl.Version;
 import org.lwjgl.opengl.GL30;
 
-import compute.ComputeManager;
 import display.DisplayManager;
 import input.Input;
 import ocean.shaders.OceanShader;
@@ -22,7 +21,6 @@ public class Main {
 	public static void main(String[] args) {
 		System.out.println("LWJGL Version " + Version.getVersion() + "!");
 		long window = DisplayManager.createDisplay();
-		ComputeManager.createContext(window);
 		Input.initListener();
 		System.out.println(GL30.glGetString(GL30.GL_VERSION));
 
@@ -126,6 +124,5 @@ public class Main {
 		}
 		
 		DisplayManager.closeDisplay();
-		ComputeManager.cleanUp();
 	}
 }
