@@ -30,11 +30,9 @@ public class CombineCompute {
 
 	public void loadWaveBuffers(Texture texture) {
 		// Bind the texture as an image for compute shader access
-		shader.bind();
+		// Note: This needs to be called before execute() if texture changes
 		GL43.glBindImageTexture(0, texture.getId(), 0, true, 0, 
 			GL43.GL_READ_WRITE, GL43.GL_RGBA32F);
-		shader.loadInt(loc_textureResolution, texture.getWidth());
-		shader.unbind();
 	}
 	
 	public void loadTexelSizes(float[] texelSizes) {
@@ -46,11 +44,11 @@ public class CombineCompute {
 	public void loadLODIndex(int lodIndex) {
 		shader.bind();
 		shader.loadInt(loc_lodIndex, lodIndex);
-		shader.unbind();
+		shader.loadInt(loc_textureResolution, textureResolution);
 	}
 	
 	public void execute() {
-		shader.bind();
+		// Shader should already be bound from loadLODIndex
 		
 		// Calculate work group counts (LOCAL_WORK_GROUP_SIZE x LOCAL_WORK_GROUP_SIZE local size in shader)
 		int numGroupsX = (textureResolution + LOCAL_WORK_GROUP_SIZE - 1) / LOCAL_WORK_GROUP_SIZE;

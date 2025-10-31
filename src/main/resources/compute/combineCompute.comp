@@ -45,12 +45,16 @@ void main() {
     vec4 current_data = imageLoad(waveBuffers, current_coords);
     
     // For next_data, we need to do bilinear sampling manually
-    // Convert UV to texture coordinates
+    // OpenCL used normalized coordinates (0-1) with CLK_NORMALIZED_COORDS_TRUE
     vec2 next_uv = next_coords_float.xy;
     int next_layer = lodIndex + 1;
     
-    // Calculate texture coordinates (in pixel space)
-    vec2 tex_coord = next_uv * float(textureResolution);
+    // Clamp UV coordinates to valid range [0, 1]
+    next_uv = clamp(next_uv, vec2(0.0), vec2(1.0));
+    
+    // Convert normalized UV (0-1) to pixel coordinates
+    // Subtract 0.5 to account for pixel centers (OpenCL CLK_ADDRESS_CLAMP_TO_EDGE behavior)
+    vec2 tex_coord = next_uv * float(textureResolution) - 0.5;
     
     // Get the four surrounding pixels
     ivec2 coord00 = ivec2(floor(tex_coord));
@@ -58,7 +62,7 @@ void main() {
     ivec2 coord01 = coord00 + ivec2(0, 1);
     ivec2 coord11 = coord00 + ivec2(1, 1);
     
-    // Clamp coordinates to texture bounds
+    // Clamp coordinates to texture bounds (CLK_ADDRESS_CLAMP_TO_EDGE)
     coord00 = clamp(coord00, ivec2(0), ivec2(textureResolution - 1));
     coord10 = clamp(coord10, ivec2(0), ivec2(textureResolution - 1));
     coord01 = clamp(coord01, ivec2(0), ivec2(textureResolution - 1));

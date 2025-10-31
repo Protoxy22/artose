@@ -64,6 +64,9 @@ public class WaveDisplacementGenerator {
 		//  Makes sure OpenGL draw calls are finished, before combining textures
 		GL30.glFinish();
 		
+		// Bind texture for compute shader access
+		combineProgram.loadWaveBuffers(waveBuffers.getTexture());
+		
 		for (int i = Ocean.LOD_COUNT - 2 ; i >= 0; i--) {
 			combineProgram.loadLODIndex(i);
 			combineProgram.execute();
