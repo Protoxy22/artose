@@ -6,6 +6,7 @@ import textures.Texture;
 
 public class CombineCompute {
 	private static final String SOURCE_FILE = "compute/combineCompute.comp";
+	private static final int LOCAL_WORK_GROUP_SIZE = 16; // Must match local_size_x and local_size_y in shader
 	
 	private ComputeShaderProgram shader;
 	
@@ -51,9 +52,9 @@ public class CombineCompute {
 	public void execute() {
 		shader.bind();
 		
-		// Calculate work group counts (16x16 local size in shader)
-		int numGroupsX = (textureResolution + 15) / 16;
-		int numGroupsY = (textureResolution + 15) / 16;
+		// Calculate work group counts (LOCAL_WORK_GROUP_SIZE x LOCAL_WORK_GROUP_SIZE local size in shader)
+		int numGroupsX = (textureResolution + LOCAL_WORK_GROUP_SIZE - 1) / LOCAL_WORK_GROUP_SIZE;
+		int numGroupsY = (textureResolution + LOCAL_WORK_GROUP_SIZE - 1) / LOCAL_WORK_GROUP_SIZE;
 		
 		shader.dispatch(numGroupsX, numGroupsY, 1);
 		shader.waitForCompletion();

@@ -19,7 +19,7 @@ public class ComputeShaderProgram {
         
         // Check for linking errors
         if (GL43.glGetProgrami(programID, GL43.GL_LINK_STATUS) == GL43.GL_FALSE) {
-            System.out.println(GL43.glGetProgramInfoLog(programID, 1024));
+            System.err.println(GL43.glGetProgramInfoLog(programID, 1024));
             System.err.println("Could not link compute shader program!");
             throw new RuntimeException("Failed to link compute shader program");
         }
@@ -104,7 +104,7 @@ public class ComputeShaderProgram {
         GL43.glCompileShader(shaderID);
         
         if (GL43.glGetShaderi(shaderID, GL43.GL_COMPILE_STATUS) == GL43.GL_FALSE) {
-            System.out.println(GL43.glGetShaderInfoLog(shaderID, 1024));
+            System.err.println(GL43.glGetShaderInfoLog(shaderID, 1024));
             System.err.println("Could not compile compute shader!");
             throw new RuntimeException("Failed to compile compute shader: " + file);
         }
